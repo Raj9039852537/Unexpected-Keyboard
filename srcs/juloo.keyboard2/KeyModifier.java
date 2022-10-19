@@ -50,6 +50,7 @@ class KeyModifier
       case MACRON: return apply_dead_char(k, '\u00AF');
       case OGONEK: return apply_dead_char(k, '\u02DB');
       case DOT_ABOVE: return apply_dead_char(k, '\u02D9');
+      case BREVE: return apply_dead_char(k, '\u02D8');
       case DOUBLE_AIGU: return apply_map_char(k, map_char_double_aigu);
       case ORDINAL: return apply_map_char(k, map_char_ordinal);
       case SUPERSCRIPT: return apply_map_char(k, map_char_superscript);
@@ -144,6 +145,7 @@ class KeyModifier
       case KeyEvent.KEYCODE_DPAD_LEFT: return "home";
       case KeyEvent.KEYCODE_DPAD_RIGHT: return "end";
       case KeyEvent.KEYCODE_ESCAPE: return "insert";
+      case KeyEvent.KEYCODE_TAB: return "\\t";
       default: return null;
     }
   }
@@ -241,7 +243,6 @@ class KeyModifier
       case '⊃': return "⊇";
       case '±': return "∓";
       // other
-      case '\t': return "\\t";
       case ' ': return "nbsp";
       default: return null;
     }
