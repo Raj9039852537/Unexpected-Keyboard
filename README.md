@@ -5,21 +5,19 @@ A lightweight virtual keyboard for developers.
 | --- | --- | --- |
 | <img src="/metadata/android/en-US/images/phoneScreenshots/4.png" alt="Screenshot-4" /> | <img src="/metadata/android/en-US/images/phoneScreenshots/5.png" alt="Screenshot-5" /> | <img src="/metadata/android/en-US/images/phoneScreenshots/6.png" alt="Screenshot-6" /> |
 
-This app is a virtual keyboard for Android. The main features are easy typing of every ASCII character using the swipe gesture, dead keys for accents and modifier keys and the presence of special keys (tab, esc, arrows, etc..).
-
-The keyboard shows up to 4 extra characters in the corners of each key. These extra characters are hit by swiping the finger on the key.
+The main feature is easy typing of more characters by swiping the keys toward the corners.
 
 Highlight of some of the features:
 
-- Every character and special keys that are also available on a PC keyboard. This is perfect for using applications like Termux.
+- Every character and special keys of a PC keyboard. This is perfect for using applications like Termux.
 
-- This includes Tab, Esc, the arrows and function keys, but also Ctrl and Alt !
+- This includes Tab, Esc, the arrows and function keys, but also Ctrl and Alt.
 
 - Accented keys are accessible using dead keys. First activate the accent, then type the accented letter.
 
 - Very light and fast. Use 500x times less space than Google's keyboard and 15x times less than the default keyboard. No ad, no tracking.
 
-- Multiple layouts: QWERTY, QWERTZ, AZERTY. Themes: White, Dark, OLED Black. And many other options.
+- Personalizable with many options, layouts and themes.
 
 Like any other virtual keyboards, it must be enabled in the system settings. Open the System Settings and go to:
 System > Languages & input > On-screen keyboard > Manage on-screen keyboards.

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string-array name="pref_layout_values">
-    <item>system</item>
+    <item>none</item>
     <item>azerty</item>
     <item>qwerty</item>
     <item>qwerty_pt</item>
@@ -13,9 +13,14 @@
     <item>qwerty_sv_se</item>
     <item>qwerty_hu</item>
     <item>qwerty_tr</item>
+    <item>qwerty_pl</item>
+    <item>qwerty_vi</item>
     <item>ru_jcuken</item>
     <item>qwertz</item>
+    <item>qwertz_cs</item>
+    <item>qwertz_de</item>
     <item>qwertz_hu</item>
+    <item>qwertz_sk</item>
     <item>bgph1</item>
     <item>dvorak</item>
     <item>colemak</item>
@@ -24,9 +29,12 @@
     <item>jcuken_ua</item>
     <item>bangla</item>
     <item>hindi</item>
+    <item>he_il_1452_1</item>
+    <item>he_il_1452_2</item>
+    <item>custom</item>
   </string-array>
   <string-array name="pref_layout_entries">
-    <item>@string/pref_layout_e_system</item>
+    <item>None</item>
     <item>AZERTY</item>
     <item>QWERTY</item>
     <item>QWERTY (Brasileiro)</item>
@@ -38,9 +46,14 @@
     <item>QWERTY (Swedish)</item>
     <item>QWERTY (Hungarian)</item>
     <item>QWERTY (Türkçe)</item>
+    <item>QWERTY (Polski)</item>
+    <item>QWERTY (Vietnamese)</item>
     <item>ЙЦУКЕН (Русский)</item>
     <item>QWERTZ</item>
+    <item>QWERTZ (Czech)</item>
+    <item>QWERTZ (Deutsch)</item>
     <item>QWERTZ (Hungarian)</item>
+    <item>QWERTZ (Slovak)</item>
     <item>Bulgarian (Phonetic Traditional)</item>
     <item>Dvorak</item>
     <item>Colemak</item>
@@ -49,23 +62,32 @@
     <item>ЙЦУКЕН (Українська)</item>
     <item>বাংলা</item>
     <item>हिन्दी</item>
-  </string-array>
-  <string-array name="pref_programming_layout_values">
-    <item>none</item>
-    <item>qwerty</item>
-    <item>dvorak</item>
-    <item>colemak</item>
-  </string-array>
-  <string-array name="pref_programming_layout_entries">
-    <item>@string/pref_programming_layout_none</item>
-    <item>QWERTY</item>
-    <item>Dvorak</item>
-    <item>Colemak</item>
+    <item>Hebrew SI-1452-1</item>
+    <item>Hebrew SI-1452-2</item>
+    <item>@string/pref_layout_e_custom</item>
   </string-array>
   <string-array name="pref_accents_entries">
     <item>@string/pref_accents_e_all_installed</item>
     <item>@string/pref_accents_e_selected</item>
     <item>@string/pref_accents_e_none</item>
+  </string-array>
+  <string-array name="pref_show_numpad_values">
+    <item>never</item>
+    <item>landscape</item>
+    <item>always</item>
+  </string-array>
+  <string-array name="pref_show_numpad_entries">
+    <item>@string/pref_show_numpad_never</item>
+    <item>@string/pref_show_numpad_landscape</item>
+    <item>@string/pref_show_numpad_always</item>
+  </string-array>
+  <string-array name="pref_numpad_layout_values">
+    <item>high_first</item>
+    <item>low_first</item>
+  </string-array>
+  <string-array name="pref_numpad_layout_entries">
+    <item>@string/pref_numpad_layout_e_high_first</item>
+    <item>@string/pref_numpad_layout_e_low_first</item>
   </string-array>
   <string-array name="pref_accents_values">
     <item>1</item>
@@ -77,14 +99,18 @@
     <item>@string/pref_theme_e_dark</item>
     <item>@string/pref_theme_e_light</item>
     <item>@string/pref_theme_e_black</item>
+    <item>@string/pref_theme_e_altblack</item>
     <item>@string/pref_theme_e_white</item>
+    <item>@string/pref_theme_e_epaper</item>
   </string-array>
   <string-array name="pref_theme_values">
     <item>system</item>
     <item>dark</item>
     <item>light</item>
     <item>black</item>
+    <item>altblack</item>
     <item>white</item>
+    <item>epaper</item>
   </string-array>
   <string-array name="pref_swipe_dist_entries">
     <item>@string/pref_swipe_dist_e_very_short</item>

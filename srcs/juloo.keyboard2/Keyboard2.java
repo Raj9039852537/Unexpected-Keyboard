@@ -6,66 +6,88 @@ import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
 import android.os.Build.VERSION;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.text.InputType;
+import android.util.Log;
+import android.util.LogPrinter;
 import android.view.ContextThemeWrapper;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSubtype;
-import android.view.KeyEvent;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewParent;
-import android.util.Log;
-import android.util.LogPrinter;
 import java.util.Arrays;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Keyboard2 extends InputMethodService
-  implements SharedPreferences.OnSharedPreferenceChangeListener,
-             Autocapitalisation.Callback
+  implements SharedPreferences.OnSharedPreferenceChangeListener
 {
   static private final String TAG = "Keyboard2";
 
   private Keyboard2View _keyboardView;
-  private int _currentTextLayout;
+  private KeyEventHandler _keyeventhandler;
+  // If not 'null', the layout to use instead of [_currentTextLayout].
+  private KeyboardData _currentSpecialLayout;
+  private Current_text_layout _currentTextLayout;
+  // Layout associated with the currently selected locale.
+  private KeyboardData _localeTextLayout;
   private ViewGroup _emojiPane = null;
 
   private Config _config;
-  private Autocapitalisation _autocap;
 
   private boolean _debug_logs = false;
 
-  private KeyboardData getLayout(int resId)
+  /** Layout currently visible. */
+  KeyboardData current_layout()
   {
-    return KeyboardData.load(getResources(), resId);
+    if (_currentSpecialLayout != null)
+      return _currentSpecialLayout;
+    KeyboardData layout;
+    if (_currentTextLayout == Current_text_layout.SECONDARY)
+      layout = _config.second_layout;
+    else if (_config.layout == null)
+      layout = _localeTextLayout;
+    else
+      layout = _config.layout;
+    return _config.modify_layout(layout);
+  }
+
+  void setTextLayout(Current_text_layout layout)
+  {
+    _currentTextLayout = layout;
+    _currentSpecialLayout = null;
+    _keyboardView.setKeyboard(current_layout());
+  }
+
+  void setSpecialLayout(KeyboardData l)
+  {
+    _currentSpecialLayout = l;
+    _keyboardView.setKeyboard(l);
+  }
+
+  KeyboardData loadLayout(int layout_id)
+  {
+    return KeyboardData.load(getResources(), layout_id);
   }
 
   @Override
   public void onCreate()
   {
     super.onCreate();
-    PreferenceManager.setDefaultValues(this, R.xml.settings, false);
-    PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(this);
-    Config.initGlobalConfig(this, new KeyEventHandler(this.new Receiver()));
+    KeyboardData.init(getResources());
+    SharedPreferences prefs = DirectBootAwarePreferences.get_shared_preferences(this);
+    prefs.registerOnSharedPreferenceChangeListener(this);
+    _keyeventhandler = new KeyEventHandler(getMainLooper(), this.new Receiver());
+    Config.initGlobalConfig(prefs, getResources(), _keyeventhandler);
     _config = Config.globalConfig();
-    _config.refresh(this);
     _keyboardView = (Keyboard2View)inflate_view(R.layout.keyboard);
     _keyboardView.reset();
     _debug_logs = getResources().getBoolean(R.bool.debug_logs);
-    _autocap = new Autocapitalisation(getMainLooper(), this);
-  }
-
-  public void update_shift_state(boolean should_enable, boolean should_disable)
-  {
-    if (should_enable)
-      _keyboardView.set_shift_state(true);
-    else if (should_disable)
-      _keyboardView.set_shift_state(false);
   }
 
   private List<InputMethodSubtype> getEnabledSubtypes(InputMethodManager imm)
@@ -79,16 +101,11 @@ public class Keyboard2 extends InputMethodService
 
   private void refreshSubtypeLayout(InputMethodSubtype subtype)
   {
-    int l = _config.layout;
-    if (l == -1)
-    {
-      String s = subtype.getExtraValueOf("default_layout");
-      if (s != null)
-        l = Config.layoutId_of_string(s);
-      else
-        l = R.xml.qwerty;
-    }
-    _currentTextLayout = l;
+    String s = subtype.getExtraValueOf("default_layout");
+    if (s != null)
+      _localeTextLayout = _config.layout_of_string(getResources(), s);
+    else
+      _localeTextLayout = KeyboardData.load(getResources(), R.xml.qwerty);
   }
 
   private void extra_keys_of_subtype(Set<KeyValue> dst, InputMethodSubtype subtype)
@@ -132,14 +149,15 @@ public class Keyboard2 extends InputMethodService
       case 1: case 2: case 3: _config.extra_keys_subtype = null; break;
       case 4: _config.extra_keys_subtype = new HashSet<KeyValue>(); break;
     }
-    // Fallback for the layout option: Use qwerty in the "system settings" case
-    _currentTextLayout = (_config.layout == -1) ? R.xml.qwerty : _config.layout;
   }
 
   private void refreshSubtypeImm()
   {
     InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-    _config.shouldOfferSwitchingToNextInputMethod = imm.shouldOfferSwitchingToNextInputMethod(getConnectionToken());
+    if (VERSION.SDK_INT < 28)
+      _config.shouldOfferSwitchingToNextInputMethod = true;
+    else
+      _config.shouldOfferSwitchingToNextInputMethod = shouldOfferSwitchingToNextInputMethod();
     if (VERSION.SDK_INT < 12)
     {
       // Subtypes won't work well under API level 12 (getExtraValueOf)
@@ -159,9 +177,15 @@ public class Keyboard2 extends InputMethodService
         refreshAccentsOption(imm, subtype);
       }
     }
-    _config.shouldOfferSwitchingToProgramming =
-      _config.programming_layout != -1 &&
-      _currentTextLayout != _config.programming_layout;
+    if (_config.second_layout == null)
+    {
+      _config.shouldOfferSwitchingToSecond = false;
+      _currentTextLayout = Current_text_layout.PRIMARY;
+    }
+    else
+    {
+      _config.shouldOfferSwitchingToSecond = true;
+    }
   }
 
   private String actionLabel_of_imeAction(int action)
@@ -189,23 +213,25 @@ public class Keyboard2 extends InputMethodService
     if (info.actionLabel != null)
     {
       _config.actionLabel = info.actionLabel.toString();
-      _config.actionId = info.actionId;
+      _keyeventhandler.actionId = info.actionId;
       _config.swapEnterActionKey = false;
     }
     else
     {
       int action = info.imeOptions & EditorInfo.IME_MASK_ACTION;
       _config.actionLabel = actionLabel_of_imeAction(action); // Might be null
-      _config.actionId = action;
+      _keyeventhandler.actionId = action;
       _config.swapEnterActionKey =
         (info.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION) == 0;
     }
   }
 
-  private void refreshConfig()
+  /** Might re-create the keyboard view. [_keyboardView.setKeyboard()] and
+      [setInputView()] must be called soon after. */
+  private void refresh_config()
   {
     int prev_theme = _config.theme;
-    _config.refresh(this);
+    _config.refresh(getResources());
     refreshSubtypeImm();
     // Refreshing the theme config requires re-creating the views
     if (prev_theme != _config.theme)
@@ -213,6 +239,7 @@ public class Keyboard2 extends InputMethodService
       _keyboardView = (Keyboard2View)inflate_view(R.layout.keyboard);
       _emojiPane = null;
     }
+    _keyboardView.reset();
   }
 
   private void log_editor_info(EditorInfo info)
@@ -225,16 +252,30 @@ public class Keyboard2 extends InputMethodService
     Log.d(TAG, "actionLabel: "+_config.actionLabel);
   }
 
+  private void refresh_special_layout(EditorInfo info)
+  {
+    switch (info.inputType & InputType.TYPE_MASK_CLASS)
+    {
+      case InputType.TYPE_CLASS_NUMBER:
+      case InputType.TYPE_CLASS_PHONE:
+      case InputType.TYPE_CLASS_DATETIME:
+        _currentSpecialLayout =
+          _config.modify_numpad(KeyboardData.load_pin_entry(getResources()));
+        break;
+      default:
+        _currentSpecialLayout = null;
+        break;
+    }
+  }
+
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting)
   {
-    refreshConfig();
+    refresh_config();
     refresh_action_label(info);
-    if ((info.inputType & InputType.TYPE_CLASS_NUMBER) != 0)
-      _keyboardView.setKeyboard(getLayout(R.xml.numeric));
-    else
-      _keyboardView.setKeyboard(getLayout(_currentTextLayout));
-    _autocap.started(info, getCurrentInputConnection());
+    refresh_special_layout(info);
+    _keyboardView.setKeyboard(current_layout());
+    _keyeventhandler.started(info);
     setInputView(_keyboardView);
     if (_debug_logs)
       log_editor_info(info);
@@ -253,14 +294,14 @@ public class Keyboard2 extends InputMethodService
   public void onCurrentInputMethodSubtypeChanged(InputMethodSubtype subtype)
   {
     refreshSubtypeImm();
-    _keyboardView.setKeyboard(getLayout(_currentTextLayout));
+    _keyboardView.setKeyboard(current_layout());
   }
 
   @Override
   public void onUpdateSelection(int oldSelStart, int oldSelEnd, int newSelStart, int newSelEnd, int candidatesStart, int candidatesEnd)
   {
     super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd);
-    _autocap.selection_updated(oldSelStart, newSelStart);
+    _keyeventhandler.selection_updated(oldSelStart, newSelStart);
   }
 
   @Override
@@ -271,9 +312,11 @@ public class Keyboard2 extends InputMethodService
   }
 
   @Override
-  public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key)
+  public void onSharedPreferenceChanged(SharedPreferences _prefs, String _key)
   {
-    refreshConfig();
+    refresh_config();
+    setInputView(_keyboardView);
+    _keyboardView.setKeyboard(current_layout());
   }
 
   @Override
@@ -286,12 +329,21 @@ public class Keyboard2 extends InputMethodService
   /** Not static */
   public class Receiver implements KeyEventHandler.IReceiver
   {
-    public void switchToNextInputMethod()
+    public void switchInputMethod()
     {
       InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
       imm.showInputMethodPicker();
-      // deprecated in version 28: imm.switchToNextInputMethod(getConnectionToken(), false);
-      // added in version 28: switchToNextInputMethod(false);
+    }
+
+    public void switchToPrevInputMethod()
+    {
+      if (VERSION.SDK_INT < 28)
+      {
+        InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+        imm.switchToLastInputMethod(getConnectionToken());
+      }
+      else
+        Keyboard2.this.switchToPreviousInputMethod();
     }
 
     public void setPane_emoji()
@@ -306,54 +358,33 @@ public class Keyboard2 extends InputMethodService
       setInputView(_keyboardView);
     }
 
-    public void performAction()
+    public void set_shift_state(boolean state, boolean lock)
     {
-      InputConnection conn = getCurrentInputConnection();
-      if (conn == null)
-        return;
-      conn.performEditorAction(_config.actionId);
+      _keyboardView.set_shift_state(state, lock);
     }
 
-    public void switchMain()
+    public void set_layout(KeyEventHandler.Layout l)
     {
-      _keyboardView.setKeyboard(getLayout(_currentTextLayout));
-    }
-
-    public void switchNumeric()
-    {
-      _keyboardView.setKeyboard(getLayout(R.xml.numeric));
-    }
-
-    public void switchGreekmath()
-    {
-      _keyboardView.setKeyboard(getLayout(R.xml.greekmath));
-    }
-
-    public void switchProgramming()
-    {
-      if (_config.programming_layout == -1)
-        return;
-      KeyboardData layout =
-        getLayout(_config.programming_layout).mapKeys(new KeyboardData.MapKeyValues() {
-          public KeyValue apply(KeyValue key, boolean localized)
-          {
-            if (key.getKind() == KeyValue.Kind.Event
-                && key.getEvent() == KeyValue.Event.SWITCH_PROGRAMMING)
-              return KeyValue.getKeyByName("switch_text");
-            return key;
-          }
-        });
-      _keyboardView.setKeyboard(layout);
-    }
-
-    public void sendKeyEvent(int eventAction, int eventCode, int meta)
-    {
-      InputConnection conn = getCurrentInputConnection();
-      if (conn == null)
-        return;
-      conn.sendKeyEvent(new KeyEvent(1, 1, eventAction, eventCode, 0, meta));
-      if (eventAction == KeyEvent.ACTION_UP)
-        _autocap.event_sent(eventCode, meta);
+      switch (l)
+      {
+        case Current:
+          _currentSpecialLayout = null;
+          _keyboardView.setKeyboard(current_layout());
+          break;
+        case Primary:
+          setTextLayout(Current_text_layout.PRIMARY);
+          break;
+        case Secondary:
+          if (_config.second_layout != null)
+            setTextLayout(Current_text_layout.SECONDARY);
+          break;
+        case Numeric:
+          setSpecialLayout(_config.modify_numpad(loadLayout(R.xml.numeric)));
+          break;
+        case Greekmath:
+          setSpecialLayout(_config.modify_numpad(loadLayout(R.xml.greekmath)));
+          break;
+      }
     }
 
     public void showKeyboardConfig()
@@ -363,16 +394,9 @@ public class Keyboard2 extends InputMethodService
       startActivity(intent);
     }
 
-    public void commitText(String text)
+    public InputConnection getCurrentInputConnection()
     {
-      getCurrentInputConnection().commitText(text, 1);
-      _autocap.typed(text);
-    }
-
-    public void commitChar(char c)
-    {
-      sendKeyChar(c);
-      _autocap.typed(c);
+      return Keyboard2.this.getCurrentInputConnection();
     }
   }
 
@@ -384,5 +408,11 @@ public class Keyboard2 extends InputMethodService
   private View inflate_view(int layout)
   {
     return View.inflate(new ContextThemeWrapper(this, _config.theme), layout, null);
+  }
+
+  private static enum Current_text_layout
+  {
+    PRIMARY,
+    SECONDARY
   }
 }

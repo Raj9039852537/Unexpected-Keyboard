@@ -29,19 +29,33 @@ public class ExtraKeyCheckBoxPreference extends CheckBoxPreference
     "accent_macron",
     "accent_ogonek",
     "accent_breve",
+    "accent_slash",
+    "accent_bar",
+    "accent_dot_below",
+    "accent_hook_above",
+    "accent_horn",
     "€",
     "ß",
     "£",
     "switch_greekmath",
+    "capslock",
+    "copy",
+    "paste",
+    "cut",
+    "selectAll",
+    "shareText",
+    "pasteAsPlainText",
+    "undo",
+    "redo",
+    "replaceText",
+    "textAssist",
+    "autofill",
   };
 
   public static boolean default_checked(String name)
   {
     switch (name)
     {
-      case "alt":
-      case "meta":
-        return true;
       default:
         return false;
     }
@@ -56,10 +70,14 @@ public class ExtraKeyCheckBoxPreference extends CheckBoxPreference
     int index = a.getInteger(R.styleable.ExtraKeyCheckBoxPreference_index, 0);
     a.recycle();
     String key_name = extra_keys[index];
+    KeyValue kv = KeyValue.getKeyByName(key_name);
+    String title = kv.getString();
+    String descr = KeyValue.getKeyDescription(key_name);
+    if (descr != null)
+      title += " (" + descr + ")";
     setKey(pref_key_of_key_name(key_name));
     setDefaultValue(default_checked(key_name));
-    KeyValue kv = KeyValue.getKeyByName(key_name);
-    setTitle(kv.getString());
+    setTitle(title);
     _key_font = kv.hasFlags(KeyValue.FLAG_KEY_FONT);
   }
 
